@@ -102,6 +102,7 @@ bool CameraImporter::deinitialize() {
 
 bool CameraImporter::cycle () {
     if (fd_camera == 0) return false;
+    if (fd_camera != 0) return false; //TODO remove
 
     //Read Camera
     bool valid = checkCameraFileHandle();
