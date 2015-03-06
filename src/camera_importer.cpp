@@ -30,7 +30,7 @@ bool CameraImporter::initialize() {
 //    file = config->get_or_default<std::string>("device", "/dev/video0");
     file = cameraConfig->get<std::string>("device");
 //    cameraSettingsFile = config->get_or_default<std::string>("camera_settings", "default");
-    cameraSettingsFile = cameraConfig->get<std::string>("camera_settings");
+//    cameraSettingsFile = cameraConfig->get<std::string>("camera_settings");
 //    width = config->get_or_default("width", 320);
     width = cameraConfig->get<int>("width");
 //    height = config->get_or_default("height", 240);
