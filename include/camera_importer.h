@@ -7,10 +7,10 @@
 
 #include <linux/videodev2.h>
 
-#include <core/datamanager.h>
-#include <core/module.h>
-#include <core/type/static_image.h>
-#include <core/type/module_config.h>
+#include <lms/datamanager.h>
+#include <lms/module.h>
+#include <lms/type/static_image.h>
+#include <lms/type/module_config.h>
 
 class CameraImporter : public lms::Module {
 public:

@@ -1,14 +1,14 @@
 #include <camera_importer.h>
 #include <string>
-#include <core/type/static_image.h>
-#include <core/datamanager.h>
+#include <lms/type/static_image.h>
+#include <lms/datamanager.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <linux/videodev2.h>
-#include <core/type/module_config.h>
+#include <lms/type/module_config.h>
 #include <string.h>
 //TODO: Use MMAPING!
 
@@ -24,8 +24,8 @@ static int xioctl(int64_t fh, int64_t request, void *arg)
 bool CameraImporter::initialize() {
 	printf("Init: CameraImporter\n");
 
-    //imageData = datamanager()->writeChannel<lms::type::StaticImage<320,240,char>>(this,"CAMERA");
-    cameraConfig = datamanager()->readChannel<lms::type::ModuleConfig>(this, "CAMERA_CONFIG");
+
+    cameraConfig = datamanager()->getConfig(this, "CAMERA_CONFIG");
 
 //    file = config->get_or_default<std::string>("device", "/dev/video0");
     file = cameraConfig->get<std::string>("device");
@@ -40,6 +40,7 @@ bool CameraImporter::initialize() {
 //    framerate = config->get_or_default("framerate", 100);
     framerate = cameraConfig->get<int>("framerate");
     bufsize = width * height * bpp;
+    std::cout << "HIER 1"<<std::endl;
 
 //	bufferCount = config->get_or_default("backlog_size", 1000);
 
@@ -50,7 +51,9 @@ bool CameraImporter::initialize() {
 	imageInfo.datasize = bufsize;
 */
 
+    std::cout << "HIER 2: size -"<<width*height <<std::endl;
     camera_buffer = new uint8_t[width*height*2];
+    std::cout << "HIER 3: size -"<<width*height <<std::endl;
 
  //TODO   handleImage = datamanager()->register_channel<unsigned char*>("IMAGE_RAW", Access::WRITE);
 
@@ -59,7 +62,9 @@ bool CameraImporter::initialize() {
     std::string cmd = "v4l2-ctl -d " + file + " --set-fmt-video=width=" + std::to_string(width) + ",height=" + std::to_string(height) + ",pixelformat=YUYV -p" + std::to_string(framerate);
 	printf("Executing %s\n", cmd.c_str());
 	system(cmd.c_str());
-	printf("Opening: %s ", file.c_str()); fflush(stdout);
+    printf("Opening: %s ", file.c_str());
+    fflush(stdout);
+
     fd_camera = open(file.c_str(), O_RDONLY);
     struct v4l2_capability cap;
     if (-1 == xioctl (fd_camera, VIDIOC_QUERYCAP, &cap)) {
