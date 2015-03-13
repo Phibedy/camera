@@ -1,0 +1,8 @@
+#Default ps2 camera values
+device = dev/video0
+camera_settings = default
+width = 320
+height = 240
+#was auch immer das ist
+bpp = 2
+framerate = 100

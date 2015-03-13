@@ -25,7 +25,7 @@ bool CameraImporter::initialize() {
 	printf("Init: CameraImporter\n");
 
 
-    cameraConfig = datamanager()->getConfig(this, "CAMERA_CONFIG");
+    cameraConfig = getConfig();
 
 //    file = config->get_or_default<std::string>("device", "/dev/video0");
     file = cameraConfig->get<std::string>("device");
@@ -40,7 +40,6 @@ bool CameraImporter::initialize() {
 //    framerate = config->get_or_default("framerate", 100);
     framerate = cameraConfig->get<int>("framerate");
     bufsize = width * height * bpp;
-    std::cout << "HIER 1"<<std::endl;
 
 //	bufferCount = config->get_or_default("backlog_size", 1000);
 
@@ -51,14 +50,12 @@ bool CameraImporter::initialize() {
 	imageInfo.datasize = bufsize;
 */
 
-    std::cout << "HIER 2: size -"<<width*height <<std::endl;
-    camera_buffer = new uint8_t[width*height*2];
-    std::cout << "HIER 3: size -"<<width*height <<std::endl;
+    camera_buffer = new uint8_t[width*height*bpp];
 
- //TODO   handleImage = datamanager()->register_channel<unsigned char*>("IMAGE_RAW", Access::WRITE);
 
 	//Start Camera
 	///Set All stuff
+    //TODO Don't know what that command should do!
     std::string cmd = "v4l2-ctl -d " + file + " --set-fmt-video=width=" + std::to_string(width) + ",height=" + std::to_string(height) + ",pixelformat=YUYV -p" + std::to_string(framerate);
 	printf("Executing %s\n", cmd.c_str());
 	system(cmd.c_str());
@@ -86,6 +83,8 @@ bool CameraImporter::initialize() {
         perror ("does not support read i/o\n");
         exit (EXIT_FAILURE);
     }
+
+    logger.info("camera was set up!");
     
     // Set camera settings
     /*TODO

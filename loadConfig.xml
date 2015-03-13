@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <modules>
-	<module>
-		<name>camera</name>
-		<path></path>
-	</module>
+    <module>
+        <name>camera_importer</name>
+            <configPaths>
+                <path>configs/</path>
+            </configPaths>
+        </module>
 </modules>
