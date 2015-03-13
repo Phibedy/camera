@@ -52,7 +52,6 @@ bool CameraImporter::initialize() {
 
     camera_buffer = new uint8_t[width*height*bpp];
 
-
 	//Start Camera
 	///Set All stuff
     //TODO Don't know what that command should do!
