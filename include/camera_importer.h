@@ -2,6 +2,7 @@
 #define IMPORTER_IMAGE_IMPORTER_H
 
 #include <stdio.h>
+#include <cstdint>
 
 #include <vector>
 
@@ -30,7 +31,7 @@ protected:
     int bpp;
     int framerate;
 
-    uint8_t* camera_buffer;
+    std::uint8_t* cameraBuffer;
     int bufsize;
 
     int fd_camera;

@@ -1,4 +1,5 @@
 #include <camera_importer.h>
+#include <cstdint>
 #include <string>
 #include <lms/type/static_image.h>
 #include <lms/datamanager.h>
@@ -22,81 +23,55 @@ static int xioctl(int64_t fh, int64_t request, void *arg)
 }
 
 bool CameraImporter::initialize() {
-	printf("Init: CameraImporter\n");
+    logger.info() << "Init: CameraImporter";
 
-
+    // read config
     cameraConfig = getConfig();
 
-//    file = config->get_or_default<std::string>("device", "/dev/video0");
     file = cameraConfig->get<std::string>("device");
-//    cameraSettingsFile = config->get_or_default<std::string>("camera_settings", "default");
-//    cameraSettingsFile = cameraConfig->get<std::string>("camera_settings");
-//    width = config->get_or_default("width", 320);
     width = cameraConfig->get<int>("width");
-//    height = config->get_or_default("height", 240);
     height = cameraConfig->get<int>("height");
-//    bpp = config->get_or_default("bpp", 2);
     bpp = cameraConfig->get<int>("bpp");
-//    framerate = config->get_or_default("framerate", 100);
     framerate = cameraConfig->get<int>("framerate");
+
+    // initialize image
     bufsize = width * height * bpp;
-
-//	bufferCount = config->get_or_default("backlog_size", 1000);
-
-/*
-	imageInfo.width = width;
-	imageInfo.height = height;
-	imageInfo.bpp = bpp;
-	imageInfo.datasize = bufsize;
-*/
-
-    camera_buffer = new uint8_t[width*height*bpp];
+    cameraBuffer = new std::uint8_t[bufsize];
 
 	//Start Camera
 	///Set All stuff
     //TODO Don't know what that command should do!
     std::string cmd = "v4l2-ctl -d " + file + " --set-fmt-video=width=" + std::to_string(width) + ",height=" + std::to_string(height) + ",pixelformat=YUYV -p" + std::to_string(framerate);
-	printf("Executing %s\n", cmd.c_str());
-	system(cmd.c_str());
-    printf("Opening: %s ", file.c_str());
-    fflush(stdout);
+    logger.debug("init") << "Executing " << cmd;
+
+    int cmdStatus = system(cmd.c_str());
+    if(cmdStatus != 0) {
+        logger.warn("init") << "Command returned with " << cmdStatus;
+    }
+    logger.debug("init") << "Opening: " << file;
+
+
+    fflush(stdout);  // TODO why do we need that here?
 
     fd_camera = open(file.c_str(), O_RDONLY);
-    struct v4l2_capability cap;
-    if (-1 == xioctl (fd_camera, VIDIOC_QUERYCAP, &cap)) {
-        if (EINVAL == errno) {
-            perror ("no V4L2 device\n");
-            exit (EXIT_FAILURE);
-        } else {
-            perror("\nError in ioctl VIDIOC_QUERYCAP\n\n");
-            exit(0);
-        }
-    }
-
-    if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-        perror ("is no video capture device\n");
-        exit (EXIT_FAILURE);
-    }
-
-    if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
-        perror ("does not support read i/o\n");
-        exit (EXIT_FAILURE);
-    }
+    checkCameraFileHandle();
 
     logger.info("camera was set up!");
     
     // Set camera settings
-    /*TODO
+
     queryCameraControls();
     setCameraSettings();
     queryCameraControls(); // Re-read current controls
     printCameraControls();
-    */
+
+    logger.info() << "After query and set!!";
+
 	return true;
 }
 
 bool CameraImporter::deinitialize() {
-	printf("Deinit: CameraImporter\n");
+    logger.info("deinit") << "Deinit: CameraImporter";
 	//Stop Camera
 	if (fd_camera)
         close (fd_camera);
@@ -123,15 +98,15 @@ bool CameraImporter::cycle () {
             usleep(100);
         }
         // Set camera settings
-        /*
+
         queryCameraControls();
         setCameraSettings();
         queryCameraControls(); // Re-read current controls
         printCameraControls();
-        */
+
     }
-    //TODO why times 2????
-    read(fd_camera, camera_buffer, width*height*2);
+
+    read(fd_camera, cameraBuffer, bufsize);
     //TODO set camera-data-channel
 
 	return true;
@@ -336,25 +311,26 @@ bool CameraImporter::setControl(const std::string& name, T value)
     return setControl(cameraControls[name].id, value);
 }
 
-bool CameraImporter::checkCameraFileHandle() {
+bool CameraImporter::checkCameraFileHandle() {  
     struct v4l2_capability cap;
     if (-1 == xioctl (fd_camera, VIDIOC_QUERYCAP, &cap)) {
         if (EINVAL == errno) {
-            perror ("no V4L2 device\n");
+            logger.error("checkCameraFileHandle") << "No V4L2 device " << strerror(errno);
         } else {
-            perror("\nError in ioctl VIDIOC_QUERYCAP\n\n");
+            logger.error("checkCameraFileHandle") << "Error in ioctl VIDIOC_QUERYCAP " << strerror(errno);
         }
         return false;
     }
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-        perror ("is no video capture device\n");
+        logger.error("checkCameraFileHandle") << "is no video capture device " << strerror(errno);
         return false;
     }
 
     if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
-        perror ("does not support read i/o\n");
+        logger.error("checkCameraFileHandle") << "does not support read i/o " << strerror(errno);
         return false;
     }
+
     return true;
 }
