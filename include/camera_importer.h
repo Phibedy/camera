@@ -10,8 +10,8 @@
 
 #include <lms/datamanager.h>
 #include <lms/module.h>
-#include <lms/type/static_image.h>
 #include <lms/type/module_config.h>
+#include <lms/type/dynamic_image.h>
 
 class CameraImporter : public lms::Module {
 public:
@@ -23,16 +23,12 @@ public:
 
 protected:
 
-    lms::type::StaticImage<320,240,char> imageData;
     const lms::type::ModuleConfig* cameraConfig;
     std::string file;
-    int width;
-    int height;
-    int bpp;
     int framerate;
 
-    std::uint8_t* cameraBuffer;
-    int bufsize;
+    lms::type::DynamicImage rawImage;
+    lms::type::DynamicImage *grayImagePtr;
 
     int fd_camera;
 
@@ -51,6 +47,10 @@ protected:
     template<typename T> T getControl(const std::string& name);
     template<typename T> bool setControl(uint32_t id, T value);
     template<typename T> bool setControl(const std::string& name, T value);
+
+    // TODO move this into its own module
+    // ONLY FOR TESTING
+    void save_ppm(const std::string &filename, const lms::type::DynamicImage &image);
 };
 
 #endif

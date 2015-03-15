@@ -29,17 +29,20 @@ bool CameraImporter::initialize() {
     cameraConfig = getConfig();
 
     file = cameraConfig->get<std::string>("device");
-    width = cameraConfig->get<int>("width");
-    height = cameraConfig->get<int>("height");
-    bpp = cameraConfig->get<int>("bpp");
+    int width = cameraConfig->get<int>("width");
+    int height = cameraConfig->get<int>("height");
+    int bpp = cameraConfig->get<int>("bpp");
     framerate = cameraConfig->get<int>("framerate");
 
     // initialize image
-    bufsize = width * height * bpp;
-    cameraBuffer = new std::uint8_t[bufsize];
+    rawImage.resize(width, height, bpp);
 
-	//Start Camera
-	///Set All stuff
+    // get write permission for data channel
+    grayImagePtr = datamanager()->writeChannel<lms::type::DynamicImage>(this, "CAMERA_IMAGE");
+    grayImagePtr->resize(width, height, 1);
+
+    // Start Camera
+    // Set All stuff
     //TODO Don't know what that command should do!
     std::string cmd = "v4l2-ctl -d " + file + " --set-fmt-video=width=" + std::to_string(width) + ",height=" + std::to_string(height) + ",pixelformat=YUYV -p" + std::to_string(framerate);
     logger.debug("init") << "Executing " << cmd;
@@ -79,8 +82,10 @@ bool CameraImporter::deinitialize() {
 }
 
 bool CameraImporter::cycle () {
-    if (fd_camera == 0) return false;
-    if (fd_camera != 0) return false; //TODO remove
+    if (fd_camera == 0) {
+        logger.error("cycle") << "fd_camera is NULL";
+        return false;
+    }
 
     //Read Camera
     bool valid = checkCameraFileHandle();
@@ -90,7 +95,7 @@ bool CameraImporter::cycle () {
         printf("Camera Importer: Camera handle not valid!\n");
         while(!valid) {
             close(fd_camera);
-            std::string cmd = "v4l2-ctl -d " + file + " --set-fmt-video=width=" + std::to_string(width) + ",height=" + std::to_string(height) + ",pixelformat=YUYV -p" + std::to_string(framerate);
+            std::string cmd = "v4l2-ctl -d " + file + " --set-fmt-video=width=" + std::to_string(rawImage.width()) + ",height=" + std::to_string(rawImage.height()) + ",pixelformat=YUYV -p" + std::to_string(framerate);
             system(cmd.c_str());
             fd_camera = open(file.c_str(), O_RDONLY);
             valid = checkCameraFileHandle();
@@ -106,16 +111,26 @@ bool CameraImporter::cycle () {
 
     }
 
-    read(fd_camera, cameraBuffer, bufsize);
+    read(fd_camera, rawImage.data(), rawImage.size());
     //TODO set camera-data-channel
+
+    // convert raw image to gray image
+    size_t i = ( (rawImage.width() * rawImage.height()) >> 2 );
+    const std::uint8_t* src = rawImage.data();
+    std::uint8_t* dst = grayImagePtr->data();
+    while( i-- ) {
+        *dst++ = *src; src += 2;
+        *dst++ = *src; src += 2;
+        *dst++ = *src; src += 2;
+        *dst++ = *src; src += 2;
+    }
+
+    save_ppm("/tmp/lms_camera.ppm", *grayImagePtr);
 
 	return true;
 }
 
-bool CameraImporter::setCameraSettings(){
-    /*
-    auto config = datamanager()->config((std::string("camera_settings_") + cameraSettingsFile).c_str());
-    
+bool CameraImporter::setCameraSettings(){  
     for( auto it = cameraControls.begin(); it != cameraControls.end(); ++it )
     {
         const std::string& name = it->first;
@@ -139,17 +154,23 @@ bool CameraImporter::setCameraSettings(){
             continue;
         }
         
-        int value = config->get_or_default<int>(name, ctrl.default_value);
+        int value;
+        if(cameraConfig->hasKey(name)) {
+            value = cameraConfig->get<int>(name);
+        } else {
+            value = ctrl.default_value;
+        }
         
         setControl<int>(ctrl.id, value);
         int actualValue = getControl<int>(ctrl.id);
         if( actualValue != value )
         {
             // Configured and actual value differ..
-            printf("[V4L2] Unable to set control '%s' to desired value %i (actual: %i)!\n", name.c_str(), value, actualValue);
+            logger.warn("setCameraSettings") << "[V4L2] Unable to set control '" << name
+                                             << "' to desired value " << value
+                                             << " (actual: " << actualValue << ")!";
         }
     }
-    */
     return true;
 }
 
@@ -333,4 +354,11 @@ bool CameraImporter::checkCameraFileHandle() {
     }
 
     return true;
+}
+
+void CameraImporter::save_ppm(const std::string &filename, const lms::type::DynamicImage &image) {
+    FILE* file = fopen(filename.c_str(), "w");
+    fprintf(file, "P5\n%i %i %i\n", image.width(), image.height(), 255);
+    fwrite(image.data(), image.width()*image.height(), 1, file);
+    fclose(file);
 }
