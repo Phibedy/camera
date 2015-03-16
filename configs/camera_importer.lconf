@@ -2,7 +2,7 @@
 device = /dev/video1
 width = 320
 height = 240
-bpp = 2
+format = YUYV
 framerate = 100
 
 # Special settings for V4L (Video for Linux)

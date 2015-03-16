@@ -2,6 +2,6 @@
 
 extern "C" {
 void* getInstance () {
-	return new CameraImporter();
+    return new lms_camera_importer::CameraImporter();
 }
 }

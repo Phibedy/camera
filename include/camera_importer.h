@@ -12,6 +12,9 @@
 #include <lms/module.h>
 #include <lms/type/module_config.h>
 #include <lms/type/dynamic_image.h>
+#include "v4l2_wrapper.h"
+
+namespace lms_camera_importer {
 
 class CameraImporter : public lms::Module {
 public:
@@ -30,27 +33,13 @@ protected:
     lms::type::DynamicImage rawImage;
     lms::type::DynamicImage *grayImagePtr;
 
-    int fd_camera;
-
-	// Camera Controls
-	std::string cameraSettingsFile;
-    std::map<std::string, struct v4l2_queryctrl> cameraControls;
-
-
-    bool checkCameraFileHandle();
-
-    //TODO User controls
-    bool setCameraSettings();
-    bool queryCameraControls();
-    bool printCameraControls();
-    template<typename T> T getControl(uint32_t id);
-    template<typename T> T getControl(const std::string& name);
-    template<typename T> bool setControl(uint32_t id, T value);
-    template<typename T> bool setControl(const std::string& name, T value);
+    V4L2Wrapper *wrapper;
 
     // TODO move this into its own module
     // ONLY FOR TESTING
     void save_ppm(const std::string &filename, const lms::type::DynamicImage &image);
 };
+
+}  // namespace lms_camera_importer
 
 #endif
