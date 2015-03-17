@@ -133,7 +133,7 @@ std::uint32_t V4L2Wrapper::getFramerate() {
     memset (&streamparm, 0, sizeof (streamparm));
     streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    if (xioctl(fd, VIDIOC_S_PARM, &streamparm) == -1) {
+    if (xioctl(fd, VIDIOC_G_PARM, &streamparm) == -1) {
         logger.error("getFramerate") << "Failed to get camera FPS: " << strerror(errno);
         return 0;
     }
