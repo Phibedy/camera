@@ -49,31 +49,18 @@ bool V4L2Wrapper::isOpen() {
     return fd != 0;
 }
 
-V4L2Wrapper::PixelFormat V4L2Wrapper::pixelFormatFromString(const std::string &format) {
-    if(format == "GREY") return PixelFormat::GREY;
-    if(format == "YUYV") return PixelFormat::YUYV;
-    return PixelFormat::UNKNOWN;
-}
+std::uint32_t V4L2Wrapper::toV4L2(lms::imaging::Format fmt) {
+    using lms::imaging::Format;
 
-int V4L2Wrapper::bytesPerPixel(PixelFormat fmt) {
     switch(fmt) {
-    case PixelFormat::GREY: return 1;
-    case PixelFormat::YUYV: return 2;
-    case PixelFormat::UNKNOWN:  // go to default
+    case Format::GREY: return V4L2_PIX_FMT_GREY;
+    case Format::YUYV: return V4L2_PIX_FMT_YUYV;
+    case Format::UNKNOWN:  // go to default
     default: return 0;  // This should never happen
     }
 }
 
-std::uint32_t V4L2Wrapper::toV4L2(PixelFormat fmt) {
-    switch(fmt) {
-    case PixelFormat::GREY: return V4L2_PIX_FMT_GREY;
-    case PixelFormat::YUYV: return V4L2_PIX_FMT_YUYV;
-    case PixelFormat::UNKNOWN:  // go to default
-    default: return 0;  // This should never happen
-    }
-}
-
-bool V4L2Wrapper::setFormat(std::uint32_t width, std::uint32_t height, PixelFormat fmt) {
+bool V4L2Wrapper::setFormat(std::uint32_t width, std::uint32_t height, lms::imaging::Format fmt) {
     // http://linuxtv.org/downloads/v4l-dvb-apis/vidioc-g-fmt.html
 
     // get current pixel format of camera
@@ -85,14 +72,19 @@ bool V4L2Wrapper::setFormat(std::uint32_t width, std::uint32_t height, PixelForm
     }
 
     // Set new values
-    int bytesPerPixel = V4L2Wrapper::bytesPerPixel(fmt);
+    int bytesPerPixel = lms::imaging::bytesPerPixel(fmt);
+
+    if(bytesPerPixel <= 0) {
+        logger.error("setFormat") << "Bytes per pixel is " << bytesPerPixel;
+        return false;
+    }
 
     // http://linuxtv.org/downloads/v4l-dvb-apis/pixfmt.html#idp22265936
     format.fmt.pix.width = width;
     format.fmt.pix.height = height;
     format.fmt.pix.pixelformat = toV4L2(fmt);
     format.fmt.pix.bytesperline = width * bytesPerPixel;
-    format.fmt.pix.sizeimage = width * height * bytesPerPixel;
+    format.fmt.pix.sizeimage = lms::imaging::imageBufferSize(width, height, fmt);
 
     // try to set new values
     if (-1 == xioctl (fd, VIDIOC_S_FMT, &format)) {
@@ -403,8 +395,8 @@ void V4L2Wrapper::printFramerate() {
     }
 }
 
-int V4L2Wrapper::getFD() {
-    return fd;
+bool V4L2Wrapper::captureImage(lms::imaging::Image &image) {
+    return read(fd, image.data(), image.size()) == image.size();
 }
 
 }  // namespace lms_camera_importer

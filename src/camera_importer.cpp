@@ -1,7 +1,8 @@
 #include <camera_importer.h>
 #include <cstdint>
 #include <string>
-#include <lms/type/static_image.h>
+#include <lms/imaging/static_image.h>
+#include "lms/imaging/converter.h"
 #include <lms/datamanager.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -24,16 +25,22 @@ bool CameraImporter::initialize() {
     file = cameraConfig->get<std::string>("device");
     int width = cameraConfig->get<int>("width");
     int height = cameraConfig->get<int>("height");
-    V4L2Wrapper::PixelFormat format =
-            V4L2Wrapper::pixelFormatFromString(cameraConfig->get<std::string>("format", "YUYV"));
+    lms::imaging::Format format =
+            lms::imaging::formatFromString(cameraConfig->get<std::string>("format",
+            lms::imaging::formatToString(lms::imaging::Format::YUYV)));
     framerate = cameraConfig->get<int>("framerate");
 
+    if(format == lms::imaging::Format::UNKNOWN) {
+        logger.error("init") << "Format is " << format;
+        return false;
+    }
+
     // initialize image
-    rawImage.resize(width, height, V4L2Wrapper::bytesPerPixel(format));
+    rawImage.resize(width, height, format);
 
     // get write permission for data channel
-    grayImagePtr = datamanager()->writeChannel<lms::type::DynamicImage>(this, "CAMERA_IMAGE");
-    grayImagePtr->resize(width, height, 1);
+    grayImagePtr = datamanager()->writeChannel<lms::imaging::Image>(this, "CAMERA_IMAGE");
+    grayImagePtr->resize(width, height, lms::imaging::Format::GREY);
 
     // init wrapper
     wrapper = new V4L2Wrapper(&logger);
@@ -43,22 +50,23 @@ bool CameraImporter::initialize() {
         return false;
     }
 
-    logger.debug("init") << "Checking device ...";
-    if(! wrapper->isValidCamera()) {
-        return false;
-    }
-
     logger.debug("init") << "Setting format " << width << "x" << height << " ...";
-    if(! wrapper->setFormat(width, height, V4L2Wrapper::PixelFormat::YUYV)) {
+    if(! wrapper->setFormat(width, height, format)) {
         return false;
     }
 
-    logger.debug("init") << "Setting FPS " << framerate << "...";
+    logger.debug("init") << "Setting FPS " << framerate << " ...";
     if(! wrapper->setFramerate(framerate)) {
         return false;
     }
 
+    logger.debug("init") << "Try getFramerate";
     logger.debug("init") << "FPS: " << wrapper->getFramerate();
+
+    logger.debug("init") << "Checking device ...";
+    if(! wrapper->isValidCamera()) {
+        return false;
+    }
 
     logger.info("camera was set up!");
     
@@ -113,27 +121,14 @@ bool CameraImporter::cycle () {
     }
 
     logger.time("read");
-    read(wrapper->getFD(), rawImage.data(), rawImage.size());
+    if(! wrapper->captureImage(rawImage)) {
+        logger.error("cycle") << "Could not read a full image";
+    }
     logger.timeEnd("read");
-    //TODO set camera-data-channel
 
     logger.time("convert");
     // convert raw image to gray image
-    size_t i = ( (rawImage.width() * rawImage.height()) >> 3 ); // this is size of grayImage
-    const std::uint8_t* src = rawImage.data();
-    std::uint8_t* dst = grayImagePtr->data();
-    while( i-- ) {
-        // TODO this is bad if the size is not dividable through 4
-        *dst++ = *src; src += 2;
-        *dst++ = *src; src += 2;
-        *dst++ = *src; src += 2;
-        *dst++ = *src; src += 2;
-
-        *dst++ = *src; src += 2;
-        *dst++ = *src; src += 2;
-        *dst++ = *src; src += 2;
-        *dst++ = *src; src += 2;
-    }
+    lms::imaging::convert(rawImage, *grayImagePtr, lms::imaging::Format::GREY);
     logger.timeEnd("convert");
 
     logger.time("save");
@@ -145,10 +140,10 @@ bool CameraImporter::cycle () {
 	return true;
 }
 
-void CameraImporter::save_ppm(const std::string &filename, const lms::type::DynamicImage &image) {
+void CameraImporter::save_ppm(const std::string &filename, const lms::imaging::Image &image) {
     FILE* file = fopen(filename.c_str(), "w");
     fprintf(file, "P5\n%i %i %i\n", image.width(), image.height(), 255);
-    fwrite(image.data(), image.width()*image.height(), 1, file);
+    fwrite(image.data(), image.size(), 1, file);
     fclose(file);
 }
 

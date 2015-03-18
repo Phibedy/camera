@@ -13,4 +13,4 @@ set (HEADERS
 include_directories("include")
 
 add_library ( camera_importer MODULE ${SOURCES} ${HEADERS})
-target_link_libraries(camera_importer PRIVATE lms)
+target_link_libraries(camera_importer PRIVATE lms imaging)

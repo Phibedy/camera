@@ -15,6 +15,8 @@
 #include <map>
 
 #include "lms/type/module_config.h"
+#include "lms/imaging/format.h"
+#include "lms/imaging/image.h"
 #include "lms/logger.h"
 
 namespace lms_camera_importer {
@@ -23,12 +25,6 @@ int xioctl(int64_t fh, int64_t request, void *arg);
 
 class V4L2Wrapper {
  public:
-    enum class PixelFormat {
-        UNKNOWN = 0, GREY = 1, YUYV = 2
-    };
-
-    static PixelFormat pixelFormatFromString(const std::string &format);
-
     V4L2Wrapper(lms::logging::Logger *rootLogger);
 
     /**
@@ -61,7 +57,7 @@ class V4L2Wrapper {
      * @param fmt pixel format, e.g. V4L2_PIX_FMT_YUYV
      * @return true if the operation was successful, otherwise false
      */
-    bool setFormat(std::uint32_t width, std::uint32_t height, PixelFormat fmt);
+    bool setFormat(std::uint32_t width, std::uint32_t height, lms::imaging::Format fmt);
 
     /**
      * @brief Set the framerate of the camera
@@ -76,8 +72,6 @@ class V4L2Wrapper {
      */
     std::uint32_t getFramerate();
 
-    static int bytesPerPixel(PixelFormat fmt);
-
     /**
      * @brief Check if the device is a video capturing device.
      * @return true if camera is valid for capturing
@@ -89,7 +83,7 @@ class V4L2Wrapper {
     bool printCameraControls();
     void printFramerate();
 
-    int getFD();
+    bool captureImage(lms::imaging::Image &image);
 
  private:
     lms::logging::ChildLogger logger;
@@ -100,7 +94,7 @@ class V4L2Wrapper {
 
     std::map<std::string, struct v4l2_queryctrl> cameraControls;
 
-    static std::uint32_t toV4L2(PixelFormat fmt);
+    static std::uint32_t toV4L2(lms::imaging::Format fmt);
 
     std::int32_t getControl(std::uint32_t id);
     std::int32_t getControl(const std::string& name);

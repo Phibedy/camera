@@ -11,7 +11,7 @@
 #include <lms/datamanager.h>
 #include <lms/module.h>
 #include <lms/type/module_config.h>
-#include <lms/type/dynamic_image.h>
+#include <lms/imaging/image.h>
 #include "v4l2_wrapper.h"
 
 namespace lms_camera_importer {
@@ -30,14 +30,14 @@ protected:
     std::string file;
     int framerate;
 
-    lms::type::DynamicImage rawImage;
-    lms::type::DynamicImage *grayImagePtr;
+    lms::imaging::Image rawImage;
+    lms::imaging::Image *grayImagePtr;
 
     V4L2Wrapper *wrapper;
 
     // TODO move this into its own module
     // ONLY FOR TESTING
-    void save_ppm(const std::string &filename, const lms::type::DynamicImage &image);
+    void save_ppm(const std::string &filename, const lms::imaging::Image &image);
 };
 
 }  // namespace lms_camera_importer
