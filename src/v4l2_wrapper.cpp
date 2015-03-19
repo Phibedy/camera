@@ -365,9 +365,7 @@ bool V4L2Wrapper::printCameraControls()
     return true;
 }
 
-std::vector<std::string> V4L2Wrapper::getSupportedFormats() {
-    std::vector<std::string> formats;
-
+void V4L2Wrapper::getSupportedResolutions(std::vector<CameraResolution> &result) {
     v4l2_fmtdesc desc;
     memset(&desc, 0, sizeof(desc));
 
@@ -375,32 +373,34 @@ std::vector<std::string> V4L2Wrapper::getSupportedFormats() {
     desc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     while(xioctl(fd, VIDIOC_ENUM_FMT, &desc) == 0) {
-        std::cout << desc.description << std::endl;
-        if(desc.flags & V4L2_FMT_FLAG_COMPRESSED) {
-            std::cout << "  COMPRESSED" << std::endl;
-        }
-        if(desc.flags & V4L2_FMT_FLAG_EMULATED) {
-            std::cout << "  EMULATED" << std::endl;
-        }
-        getSupportedFramesizes(desc.pixelformat);
+        CameraResolution res;
+        res.pixelFormat = std::string((char*)desc.description);
+        res.internalPixelFormat = desc.pixelformat;
+
+//        if(desc.flags & V4L2_FMT_FLAG_COMPRESSED) {
+//            std::cout << "  COMPRESSED" << std::endl;
+//        }
+//        if(desc.flags & V4L2_FMT_FLAG_EMULATED) {
+//            std::cout << "  EMULATED" << std::endl;
+//        }
+        getSupportedFramesizes(result, res);
         desc.index ++;
     }
-
-    return formats;
 }
 
-void V4L2Wrapper::getSupportedFramesizes(std::uint32_t pixelFormat) {
+void V4L2Wrapper::getSupportedFramesizes(std::vector<CameraResolution> &result, CameraResolution res) {
     v4l2_frmsizeenum frm;
     memset(&frm, 0, sizeof(frm));
 
     frm.index = 0;
-    frm.pixel_format = pixelFormat;
+    frm.pixel_format = res.internalPixelFormat;
 
     xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frm);
     if(frm.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
         while(xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frm) != -1) {
-            std::cout << "  " << frm.discrete.width << "x" << frm.discrete.height << std::endl;
-            printFramerate(frm.discrete.width, frm.discrete.height, pixelFormat);
+            res.width = frm.discrete.width;
+            res.height = frm.discrete.height;
+            getSupportedFramerates(result, res);
             frm.index ++;
         }
     }
@@ -420,25 +420,29 @@ void V4L2Wrapper::getSupportedFramesizes(std::uint32_t pixelFormat) {
         }
 
         for(int w = minW, h = minH; w <= maxW && h <= maxH; w+=stepWidth, h+=stepHeight) {
-            std::cout << "  " << w << "x" << h << std::endl;
-            printFramerate(w, h, pixelFormat);
+            res.width = w;
+            res.height = h;
+            getSupportedFramerates(result, res);
         }
     }
 }
 
-void V4L2Wrapper::printFramerate(std::uint32_t width, std::uint32_t height, std::uint32_t pixelFormat) {
+void V4L2Wrapper::getSupportedFramerates(std::vector<CameraResolution> &result,
+                                         CameraResolution res) {
     // http://guido.vonrudorff.de/v4l2-get-framerates/
 
     struct v4l2_frmivalenum temp;
     memset(&temp, 0, sizeof(temp));
-    temp.pixel_format = pixelFormat;
-    temp.width = width;
-    temp.height = height;
+    temp.pixel_format = res.internalPixelFormat;
+    temp.width = res.width;
+    temp.height = res.height;
 
     xioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &temp);
     if (temp.type == V4L2_FRMIVAL_TYPE_DISCRETE) {
         while (xioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &temp) != -1) {
-            logger.debug("printFramerate") << float(temp.discrete.denominator)/temp.discrete.numerator << " fps";
+            res.framerate = float(temp.discrete.denominator)/temp.discrete.numerator;
+            result.push_back(res);
+
             temp.index += 1;
         }
     }
@@ -453,7 +457,8 @@ void V4L2Wrapper::printFramerate(std::uint32_t width, std::uint32_t height, std:
             stepval = float(temp.stepwise.step.numerator)/temp.stepwise.step.denominator;
         }
         for (float cval = minval; cval <= maxval; cval += stepval) {
-            logger.info("printFramerate") << 1/cval << " fps";
+            res.framerate = 1 / cval;
+            result.push_back(res);
         }
     }
 }

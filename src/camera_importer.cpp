@@ -47,7 +47,12 @@ bool CameraImporter::initialize() {
         return false;
     }
 
-    wrapper->getSupportedFormats();
+    std::vector<V4L2Wrapper::CameraResolution> resolutions;
+    wrapper->getSupportedResolutions(resolutions);
+    for(const V4L2Wrapper::CameraResolution &res: resolutions) {
+        logger.debug("cam") << res.pixelFormat << " "
+                            << res.width << "x" << res.height << " " << res.framerate << " FPS";
+    }
 
     logger.debug("init") << "Setting format " << width << "x" << height << " ...";
     if(! wrapper->setFormat(width, height, format)) {

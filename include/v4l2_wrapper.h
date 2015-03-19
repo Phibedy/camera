@@ -26,6 +26,14 @@ int xioctl(int64_t fh, int64_t request, void *arg);
 
 class V4L2Wrapper {
  public:
+    struct CameraResolution {
+        std::string pixelFormat;
+        std::uint32_t internalPixelFormat;
+        std::uint32_t width;
+        std::uint32_t height;
+        std::uint32_t framerate;
+    };
+
     V4L2Wrapper(lms::logging::Logger *rootLogger);
 
     /**
@@ -83,9 +91,7 @@ class V4L2Wrapper {
     bool queryCameraControls();
     bool printCameraControls();
 
-    std::vector<std::string> getSupportedFormats();
-    void getSupportedFramesizes(std::uint32_t pixelFormat);
-    void printFramerate(std::uint32_t width, std::uint32_t height, std::uint32_t pixelFormat);
+    void getSupportedResolutions(std::vector<CameraResolution> &result);
 
     bool captureImage(lms::imaging::Image &image);
 
@@ -104,6 +110,10 @@ class V4L2Wrapper {
     std::int32_t getControl(const std::string& name);
     bool setControl(std::uint32_t id, std::int32_t value);
     bool setControl(const std::string& name, std::int32_t value);
+
+    void getSupportedFramesizes(std::vector<CameraResolution> &result, CameraResolution res);
+    void getSupportedFramerates(std::vector<CameraResolution> &result,
+                                CameraResolution res);
 };
 
 }  // namespace lms_camera_importer
