@@ -150,6 +150,8 @@ bool V4L2Wrapper::isValidCamera() {
         return false;
     }
 
+    logger.info("isValidCamera") << cap.driver << " " << cap.card << " " << cap.bus_info;
+
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
         logger.error("checkCameraFileHandle") << "is no video capture device " << strerror(errno);
         return false;
@@ -363,14 +365,75 @@ bool V4L2Wrapper::printCameraControls()
     return true;
 }
 
-void V4L2Wrapper::printFramerate() {
+std::vector<std::string> V4L2Wrapper::getSupportedFormats() {
+    std::vector<std::string> formats;
+
+    v4l2_fmtdesc desc;
+    memset(&desc, 0, sizeof(desc));
+
+    desc.index = 0;
+    desc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    while(xioctl(fd, VIDIOC_ENUM_FMT, &desc) == 0) {
+        std::cout << desc.description << std::endl;
+        if(desc.flags & V4L2_FMT_FLAG_COMPRESSED) {
+            std::cout << "  COMPRESSED" << std::endl;
+        }
+        if(desc.flags & V4L2_FMT_FLAG_EMULATED) {
+            std::cout << "  EMULATED" << std::endl;
+        }
+        getSupportedFramesizes(desc.pixelformat);
+        desc.index ++;
+    }
+
+    return formats;
+}
+
+void V4L2Wrapper::getSupportedFramesizes(std::uint32_t pixelFormat) {
+    v4l2_frmsizeenum frm;
+    memset(&frm, 0, sizeof(frm));
+
+    frm.index = 0;
+    frm.pixel_format = pixelFormat;
+
+    xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frm);
+    if(frm.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
+        while(xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frm) != -1) {
+            std::cout << "  " << frm.discrete.width << "x" << frm.discrete.height << std::endl;
+            printFramerate(frm.discrete.width, frm.discrete.height, pixelFormat);
+            frm.index ++;
+        }
+    }
+    int stepWidth = 0, stepHeight = 0;
+    if(frm.type == V4L2_FRMSIZE_TYPE_CONTINUOUS) {
+        stepWidth = 1;
+        stepHeight = 1;
+    }
+    if(frm.type == V4L2_FRMSIZE_TYPE_CONTINUOUS || frm.type == V4L2_FRMSIZE_TYPE_STEPWISE) {
+        int minW = frm.stepwise.min_width, minH = frm.stepwise.min_height;
+        int maxW = frm.stepwise.max_width, maxH = frm.stepwise.max_height;
+        if(stepWidth == 0) {
+            stepWidth = frm.stepwise.step_width;
+        }
+        if(stepHeight == 0) {
+            stepHeight = frm.stepwise.step_height;
+        }
+
+        for(int w = minW, h = minH; w <= maxW && h <= maxH; w+=stepWidth, h+=stepHeight) {
+            std::cout << "  " << w << "x" << h << std::endl;
+            printFramerate(w, h, pixelFormat);
+        }
+    }
+}
+
+void V4L2Wrapper::printFramerate(std::uint32_t width, std::uint32_t height, std::uint32_t pixelFormat) {
     // http://guido.vonrudorff.de/v4l2-get-framerates/
 
     struct v4l2_frmivalenum temp;
     memset(&temp, 0, sizeof(temp));
-    temp.pixel_format = V4L2_PIX_FMT_YUYV;
-    temp.width = 640;
-    temp.height = 480;
+    temp.pixel_format = pixelFormat;
+    temp.width = width;
+    temp.height = height;
 
     xioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &temp);
     if (temp.type == V4L2_FRMIVAL_TYPE_DISCRETE) {

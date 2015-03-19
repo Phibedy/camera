@@ -47,6 +47,8 @@ bool CameraImporter::initialize() {
         return false;
     }
 
+    wrapper->getSupportedFormats();
+
     logger.debug("init") << "Setting format " << width << "x" << height << " ...";
     if(! wrapper->setFormat(width, height, format)) {
         return false;
@@ -123,7 +125,9 @@ bool CameraImporter::cycle () {
     }
     logger.timeEnd("read");
 
-    usleep(9000);
+    std::int64_t sleepy = 1000 * 1000 / framerate;
+    logger.debug("cycle") << "Sleepy: " << sleepy;
+    usleep(sleepy);
 
 	return true;
 }

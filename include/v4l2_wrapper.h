@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <string>
 #include <map>
+#include <vector>
 
 #include "lms/type/module_config.h"
 #include "lms/imaging/format.h"
@@ -81,7 +82,10 @@ class V4L2Wrapper {
     bool setCameraSettings(const lms::type::ModuleConfig *cameraConfig);
     bool queryCameraControls();
     bool printCameraControls();
-    void printFramerate();
+
+    std::vector<std::string> getSupportedFormats();
+    void getSupportedFramesizes(std::uint32_t pixelFormat);
+    void printFramerate(std::uint32_t width, std::uint32_t height, std::uint32_t pixelFormat);
 
     bool captureImage(lms::imaging::Image &image);
 
