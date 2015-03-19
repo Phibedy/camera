@@ -128,11 +128,4 @@ bool CameraImporter::cycle () {
 	return true;
 }
 
-void CameraImporter::save_ppm(const std::string &filename, const lms::imaging::Image &image) {
-    FILE* file = fopen(filename.c_str(), "w");
-    fprintf(file, "P5\n%i %i %i\n", image.width(), image.height(), 255);
-    fwrite(image.data(), image.size(), 1, file);
-    fclose(file);
-}
-
 }  // namespace lms_camera_importer

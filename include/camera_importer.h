@@ -33,10 +33,6 @@ protected:
     lms::imaging::Image *cameraImagePtr;
 
     V4L2Wrapper *wrapper;
-
-    // TODO move this into its own module
-    // ONLY FOR TESTING
-    void save_ppm(const std::string &filename, const lms::imaging::Image &image);
 };
 
 }  // namespace lms_camera_importer
