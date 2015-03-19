@@ -30,8 +30,7 @@ protected:
     std::string file;
     int framerate;
 
-    lms::imaging::Image rawImage;
-    lms::imaging::Image *grayImagePtr;
+    lms::imaging::Image *cameraImagePtr;
 
     V4L2Wrapper *wrapper;
 

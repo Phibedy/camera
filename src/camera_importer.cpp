@@ -35,12 +35,9 @@ bool CameraImporter::initialize() {
         return false;
     }
 
-    // initialize image
-    rawImage.resize(width, height, format);
-
     // get write permission for data channel
-    grayImagePtr = datamanager()->writeChannel<lms::imaging::Image>(this, "CAMERA_IMAGE");
-    grayImagePtr->resize(width, height, lms::imaging::Format::GREY);
+    cameraImagePtr = datamanager()->writeChannel<lms::imaging::Image>(this, "CAMERA_IMAGE");
+    cameraImagePtr->resize(width, height, format);
 
     // init wrapper
     wrapper = new V4L2Wrapper(&logger);
@@ -121,19 +118,10 @@ bool CameraImporter::cycle () {
     }
 
     logger.time("read");
-    if(! wrapper->captureImage(rawImage)) {
+    if(! wrapper->captureImage(*cameraImagePtr)) {
         logger.error("cycle") << "Could not read a full image";
     }
     logger.timeEnd("read");
-
-    logger.time("convert");
-    // convert raw image to gray image
-    lms::imaging::convert(rawImage, *grayImagePtr, lms::imaging::Format::GREY);
-    logger.timeEnd("convert");
-
-    logger.time("save");
-    save_ppm("/tmp/lms_camera.ppm", *grayImagePtr);
-    logger.timeEnd("save");
 
     usleep(9000);
 
