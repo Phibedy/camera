@@ -1,4 +1,6 @@
 #include "v4l2_wrapper.h"
+#include "sys/mman.h"  // mmap, munmap
+#include "lms/extra/time.h"
 
 namespace lms_camera_importer {
 
@@ -11,12 +13,12 @@ int xioctl(int64_t fh, int64_t request, void *arg)
     return r;
 }
 
-V4L2Wrapper::V4L2Wrapper(lms::logging::Logger *rootLogger) : logger("V4L2", rootLogger), fd(0) {
+V4L2Wrapper::V4L2Wrapper(lms::logging::Logger *rootLogger) : logger("V4L2", rootLogger), fd(0), ioType(0) {
 }
 
 bool V4L2Wrapper::openDevice(const std::string &devicePath) {
     this->devicePath = devicePath;
-    fd = ::open(devicePath.c_str(), O_RDONLY);
+    fd = ::open(devicePath.c_str(), O_RDWR /* O_RDONLY */);
 
     if(fd == -1) {
         logger.error("openDevice") << "Could not open Camera Device " << strerror(errno);
@@ -24,11 +26,35 @@ bool V4L2Wrapper::openDevice(const std::string &devicePath) {
         return false;
     }
 
+    if(!isValidCamera()) {
+        return false;
+    }
+
+    return true;
+}
+
+bool V4L2Wrapper::initBuffersIfNecessary() {
+    if(ioType == V4L2_CAP_STREAMING) {
+        logger.info("openDevice") << "Init MEMORY MAPPING";
+
+        if(! initBuffers()) {
+            return false;
+        }
+
+        if(! queueBuffers()) {
+            return false;
+        }
+    }
+
     return true;
 }
 
 bool V4L2Wrapper::closeDevice() {
     if(fd != 0) {
+        if(ioType == V4L2_CAP_STREAMING) {
+            destroyBuffers();
+        }
+
         if(close(fd) == -1) {
             logger.error("closeDevice") << "Could not close Camera Device " << strerror(errno);
             fd = 0;
@@ -79,8 +105,8 @@ bool V4L2Wrapper::setFormat(std::uint32_t width, std::uint32_t height, lms::imag
     format.fmt.pix.width = width;
     format.fmt.pix.height = height;
     format.fmt.pix.pixelformat = toV4L2(fmt);
-    format.fmt.pix.bytesperline = width * bytesPerPixel;
-    format.fmt.pix.sizeimage = lms::imaging::imageBufferSize(width, height, fmt);
+    //format.fmt.pix.bytesperline = width * bytesPerPixel;
+    //format.fmt.pix.sizeimage = lms::imaging::imageBufferSize(width, height, fmt);
 
     // try to set new values
     if (-1 == xioctl (fd, VIDIOC_S_FMT, &format)) {
@@ -146,7 +172,7 @@ bool V4L2Wrapper::isValidCamera() {
         return false;
     }
 
-    logger.info("isValidCamera") << cap.driver << " " << cap.card << " " << cap.bus_info;
+    //logger.info("isValidCamera") << cap.driver << " " << cap.card << " " << cap.bus_info;
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
         logger.error("checkCameraFileHandle") << "is no video capture device " << strerror(errno);
@@ -155,11 +181,13 @@ bool V4L2Wrapper::isValidCamera() {
 
     if(cap.capabilities & V4L2_CAP_STREAMING) {
         logger.debug("checkCameraFileHandle") << "supports streaming API";
-    }
-
-    if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
-        logger.error("checkCameraFileHandle") << "does not support read i/o " << strerror(errno);
-        return false;
+        ioType = V4L2_CAP_STREAMING;
+    } else if (cap.capabilities & V4L2_CAP_READWRITE) {
+        logger.debug("checkCameraFileHandle") << "supports read IO";
+        ioType = V4L2_CAP_READWRITE;
+    } else {
+        logger.error("isValidCamera") << "does not support any IO operations";
+        ioType = 0;
     }
 
     return true;
@@ -460,7 +488,139 @@ void V4L2Wrapper::getSupportedFramerates(std::vector<CameraResolution> &result,
 }
 
 bool V4L2Wrapper::captureImage(lms::imaging::Image &image) {
-    return read(fd, image.data(), image.size()) == image.size();
+    if(ioType == V4L2_CAP_READWRITE) {
+        return read(fd, image.data(), image.size()) == image.size();
+    } else if(ioType == V4L2_CAP_STREAMING) {
+
+        v4l2_buffer buf;
+        memset(&buf, 0, sizeof(buf));
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
+
+        /* Dequeue */
+        if(-1 == xioctl(fd, VIDIOC_DQBUF, &buf)) {
+            logger.error("captureImage") << "VIDIOC_DQBUF " << strerror(errno);
+            return false;
+        }
+
+        /* Copy data to image */
+        logger.info("captureImage") << "Image: " << image.size() << " " << buffers[buf.index].length;
+
+        timeval now;
+
+        lms::extra::PrecisionTime timestamp =
+            lms::extra::PrecisionTime::fromMicros(buf.timestamp.tv_sec * 1000 * 1000 + buf.timestamp.tv_usec);
+
+        logger.info("delay") << lms::extra::PrecisionTime::now() - timestamp;
+
+        memcpy(image.data(), buffers[buf.index].start, image.size());
+
+        /* Queue buffer for next frame */
+        if(-1 == xioctl(fd, VIDIOC_QBUF, &buf)) {
+            logger.error("captureImage") << "VIDIOC_QBUF " << strerror(errno);
+            return false;
+        }
+
+        return true;
+    } else {
+        logger.error("captureImage") << "Wrong ioType";
+        return false;
+    }
+}
+
+bool V4L2Wrapper::initBuffers() {
+    // http://events.linuxfoundation.org/sites/events/files/slides/slides_4.pdf
+    // http://linuxtv.org/downloads/v4l-dvb-apis/mmap.html
+
+    v4l2_requestbuffers reqbuf;
+    memset(&reqbuf, 0, sizeof(reqbuf));
+
+    reqbuf.count = 20;
+    reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    reqbuf.memory = V4L2_MEMORY_MMAP;
+
+    if(-1 == xioctl(fd, VIDIOC_REQBUFS, &reqbuf)) {
+        logger.error("initBuffers") << "VIDIOC_REQBUFS " << strerror(errno);
+        return false;
+    }
+
+    // allocate buffers
+    buffers = reinterpret_cast<MapBuffer*>(calloc(reqbuf.count, sizeof(*buffers)));
+    numBuffers = reqbuf.count;
+
+    logger.info("initBuffers") << "Number of buffers: " << numBuffers;
+
+    for(unsigned int n = 0; n < reqbuf.count; n++) {
+        // query buffers
+        struct v4l2_buffer buffer;
+
+        memset(&buffer, 0, sizeof(buffer));
+        buffer.type = reqbuf.type;
+        buffer.memory = V4L2_MEMORY_MMAP;
+        buffer.index = n;
+
+        if(-1 == xioctl(fd, VIDIOC_QUERYBUF, &buffer)) {
+            logger.error("initBuffers") << "VIDIOC_QUERYBUF " << strerror(errno);
+
+            // unmap and free all previous buffers
+            for(unsigned int i = 0; i < n; i++) {
+                munmap(buffers[i].start, buffers[i].length);
+            }
+
+            return false;
+        }
+        // save length and start of each buffer
+        buffers[n].length = buffer.length;
+        buffers[n].start = mmap(NULL, buffer.length,
+            PROT_READ | PROT_WRITE, MAP_SHARED,
+            fd, buffer.m.offset);
+
+        if(MAP_FAILED == buffers[n].start) {
+            logger.error("initBuffers") << "MAP_FAILED " << strerror(errno);
+
+            /* If you do not exit here you should unmap() and free()
+               the buffers mapped so far. */
+            for(unsigned int i = 0; i < n; i++) {
+                munmap(buffers[i].start, buffers[i].length);
+            }
+
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool V4L2Wrapper::queueBuffers() {
+    for(unsigned int i = 0; i < numBuffers; ++i) {
+        v4l2_buffer buf;
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
+        buf.index = i;
+
+        if(-1 == xioctl(fd, VIDIOC_QBUF, &buf)) {
+            logger.error("queueBuffers") << "Failed";
+            return false;
+        }
+    }
+
+    std::uint32_t type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if(-1 == xioctl(fd, VIDIOC_STREAMON, &type)) {
+        logger.error("queueBuffers") << "Failed";
+        return false;
+    }
+
+    return true;
+}
+
+bool V4L2Wrapper::destroyBuffers() {
+    for (unsigned int i = 0; i < numBuffers; i++) {
+        munmap(buffers[i].start, buffers[i].length);
+    }
+
+    free(buffers);
+
+    return true;
 }
 
 }  // namespace lms_camera_importer

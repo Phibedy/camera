@@ -67,10 +67,7 @@ bool CameraImporter::initialize() {
     logger.debug("init") << "Try getFramerate";
     logger.debug("init") << "FPS: " << wrapper->getFramerate();
 
-    logger.debug("init") << "Checking device ...";
-    if(! wrapper->isValidCamera()) {
-        return false;
-    }
+    wrapper->initBuffersIfNecessary();
 
     logger.info("camera was set up!");
     
@@ -132,7 +129,7 @@ bool CameraImporter::cycle () {
 
     std::int64_t sleepy = 1000 * 1000 / framerate;
     logger.debug("cycle") << "Sleepy: " << sleepy;
-    usleep(sleepy);
+    //usleep(sleepy);
 
 	return true;
 }

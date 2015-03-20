@@ -95,10 +95,17 @@ class V4L2Wrapper {
 
     bool captureImage(lms::imaging::Image &image);
 
+    bool initBuffersIfNecessary();
+
  private:
     lms::logging::ChildLogger logger;
     std::string devicePath;
     int fd;
+
+    /**
+     * @brief Should be either V4L2_CAP_READWRITE or V4L2_CAP_STREAMING.
+     */
+    std::uint32_t ioType;
 
     std::map<std::string, struct v4l2_queryctrl> cameraControls;
 
@@ -112,6 +119,18 @@ class V4L2Wrapper {
     void getSupportedFramesizes(std::vector<CameraResolution> &result, CameraResolution res);
     void getSupportedFramerates(std::vector<CameraResolution> &result,
                                 CameraResolution res);
+
+    // for MMAPPING:
+    struct MapBuffer {
+        void *start;
+        size_t length;
+    };
+
+    bool initBuffers();
+    bool queueBuffers();
+    bool destroyBuffers();
+    MapBuffer *buffers;
+    unsigned int numBuffers;
 };
 
 }  // namespace lms_camera_importer
