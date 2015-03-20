@@ -100,8 +100,6 @@ class V4L2Wrapper {
     std::string devicePath;
     int fd;
 
-    bool open;
-
     std::map<std::string, struct v4l2_queryctrl> cameraControls;
 
     static std::uint32_t toV4L2(lms::imaging::Format fmt);

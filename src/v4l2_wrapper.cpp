@@ -11,7 +11,7 @@ int xioctl(int64_t fh, int64_t request, void *arg)
     return r;
 }
 
-V4L2Wrapper::V4L2Wrapper(lms::logging::Logger *rootLogger) : logger("V4L2", rootLogger), fd(0), open(false) {
+V4L2Wrapper::V4L2Wrapper(lms::logging::Logger *rootLogger) : logger("V4L2", rootLogger), fd(0) {
 }
 
 bool V4L2Wrapper::openDevice(const std::string &devicePath) {
@@ -21,11 +21,9 @@ bool V4L2Wrapper::openDevice(const std::string &devicePath) {
     if(fd == -1) {
         logger.error("openDevice") << "Could not open Camera Device " << strerror(errno);
         fd = 0;
-        open = false;
         return false;
     }
 
-    open = true;
     return true;
 }
 
@@ -34,14 +32,12 @@ bool V4L2Wrapper::closeDevice() {
         if(close(fd) == -1) {
             logger.error("closeDevice") << "Could not close Camera Device " << strerror(errno);
             fd = 0;
-            open = false;
             return false;
         }
 
         fd = 0;
     }
 
-    open = false;
     return true;
 }
 
