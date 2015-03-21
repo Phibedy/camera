@@ -1,5 +1,6 @@
 # camera
- * Basically some modules for different cameras used by [LMS](https://github.com/Phibedy/LMS)
+ * Module to get the image from a camera, can even handle multiple cameras.
+ * [LMS](https://github.com/Phibedy/LMS)
  * Only works on linux atm
 
 ###Dependencies:
@@ -8,5 +9,5 @@
 ###TODO
  * Docs
  
-###Supported Cams
+###Supports
  * All cameras that support readIO or streaming (v4l)
