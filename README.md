@@ -9,4 +9,4 @@
  * Docs
  
 ###Supported Cams
- * [playstation-eye](http://us.playstation.com/ps3/accessories/playstation-eye-camera-ps3.html) (work in progress)
+ * All cameras that support readIO or streaming (v4l)
