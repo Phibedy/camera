@@ -26,7 +26,7 @@ bool V4L2Wrapper::openDevice(const std::string &device, const Settings &settings
 
     if(fd == -1) {
         fd = 0;
-        return error(strerror(errno));
+        return perror("Could not open device");
     }
 
     // check for device capabilities
@@ -137,10 +137,18 @@ bool V4L2Wrapper::setFormat(std::uint32_t width, std::uint32_t height, lms::imag
         return perror("VIDIOC_G_FMT");
     }
 
+    int bytesPerPixel = lms::imaging::bytesPerPixel(fmt);
+
+    if(bytesPerPixel <= 0) {
+        return error("bytesPerPixel is invalid");
+    }
+
     // http://linuxtv.org/downloads/v4l-dvb-apis/pixfmt.html#idp22265936
     format.fmt.pix.width = width;
     format.fmt.pix.height = height;
     format.fmt.pix.pixelformat = toV4L2(fmt);
+    format.fmt.pix.bytesperline = width * bytesPerPixel;
+    format.fmt.pix.sizeimage = lms::imaging::imageBufferSize(width, height, fmt);
 
     if(format.fmt.pix.pixelformat == 0) {
         return error("Format is not supported " + lms::imaging::formatToString(fmt));
