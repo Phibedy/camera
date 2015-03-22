@@ -27,8 +27,9 @@ public:
 protected:
 
     const lms::type::ModuleConfig* cameraConfig;
+
+    Camera::Settings settings;
     std::string file;
-    int framerate;
 
     lms::imaging::Image *cameraImagePtr;
 

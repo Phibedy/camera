@@ -23,60 +23,47 @@ bool CameraImporter::initialize() {
     cameraConfig = getConfig();
 
     file = cameraConfig->get<std::string>("device");
-    int width = cameraConfig->get<int>("width");
-    int height = cameraConfig->get<int>("height");
-    lms::imaging::Format format =
+
+    settings.width = cameraConfig->get<int>("width");
+    settings.height = cameraConfig->get<int>("height");
+    settings.format =
             lms::imaging::formatFromString(cameraConfig->get<std::string>("format",
             lms::imaging::formatToString(lms::imaging::Format::YUYV)));
-    framerate = cameraConfig->get<int>("framerate");
+    settings.framerate = cameraConfig->get<int>("framerate");
 
-    if(format == lms::imaging::Format::UNKNOWN) {
-        logger.error("init") << "Format is " << format;
+    if(settings.format == lms::imaging::Format::UNKNOWN) {
+        logger.error("init") << "Format is " << settings.format;
         return false;
     }
 
     // get write permission for data channel
     cameraImagePtr = datamanager()->writeChannel<lms::imaging::Image>(this, "CAMERA_IMAGE");
-    cameraImagePtr->resize(width, height, format);
+    cameraImagePtr->resize(settings.width, settings.height, settings.format);
 
     // init wrapper
-    wrapper = new V4L2Wrapper(&logger);
+    wrapper = new V4L2Wrapper();
 
     logger.debug("init") << "Opening " << file << " ...";
-    if(! wrapper->openDevice(file)) {
+    if(! wrapper->openDevice(file, settings)) {
+        logger.error("init") << wrapper->error();
         return false;
     }
 
-    std::vector<V4L2Wrapper::CameraResolution> resolutions;
-    wrapper->getSupportedResolutions(resolutions);
-    for(const V4L2Wrapper::CameraResolution &res: resolutions) {
-        logger.debug("cam") << res.pixelFormat << " "
-                            << res.width << "x" << res.height << " " << res.framerate << " FPS";
-    }
-
-    logger.debug("init") << "Setting format " << width << "x" << height << " ...";
-    if(! wrapper->setFormat(width, height, format)) {
-        return false;
-    }
-
-    logger.debug("init") << "Setting FPS " << framerate << " ...";
-    if(! wrapper->setFramerate(framerate)) {
-        return false;
-    }
-
-    logger.debug("init") << "Try getFramerate";
-    logger.debug("init") << "FPS: " << wrapper->getFramerate();
-
-    wrapper->initBuffersIfNecessary();
+//    std::vector<Camera::Settings> resolutions;
+//    wrapper->getSupportedResolutions(resolutions);
+//    for(const V4L2Wrapper::CameraResolution &res: resolutions) {
+//        logger.debug("cam") << res.pixelFormat << " "
+//                            << res.width << "x" << res.height << " " << res.framerate << " FPS";
+//    }
 
     logger.info("camera was set up!");
     
     // Set camera settings
 
-    wrapper->queryCameraControls();
-    wrapper->setCameraSettings(cameraConfig);
-    wrapper->queryCameraControls(); // Re-read current controls
-    wrapper->printCameraControls();
+//    wrapper->queryCameraControls();
+//    wrapper->setCameraSettings(cameraConfig);
+//    wrapper->queryCameraControls(); // Re-read current controls
+//    wrapper->printCameraControls();
 
     logger.info() << "After query and set!!";
 
@@ -86,29 +73,24 @@ bool CameraImporter::initialize() {
 bool CameraImporter::deinitialize() {
     logger.info("deinit") << "Deinit: CameraImporter";
 	//Stop Camera
-    wrapper->closeDevice();
+    if(! wrapper->closeDevice()) {
+        logger.error("deinit") << wrapper->error();
+    }
     delete wrapper;
 
 	return true;
 }
 
 bool CameraImporter::cycle () {
-    if (! wrapper->isOpen()) {
-        logger.error("cycle") << "fd_camera is NULL";
-        return false;
-    }
+    if(! wrapper->isDeviceReady()) {
+        logger.error("cycle") << wrapper->error();
 
-    //Read Camera
-    bool valid = wrapper->isValidCamera();
+        while(! wrapper->isDeviceReady()) {
+            logger.warn("cycle") << "Try to reopen...";
 
-    //TODO Nicht so geil
-    if(!valid) {
-        printf("Camera Importer: Camera handle not valid!\n");
-        while(!valid) {
-            wrapper->closeDevice();
-            // TODO set format and FPS
-            wrapper->openDevice(file);
-            valid = wrapper->isValidCamera();
+            if(! wrapper->reopenDevice()) {
+                logger.error("cycle") << wrapper->error();
+            }
 
             usleep(100);
         }
@@ -123,11 +105,11 @@ bool CameraImporter::cycle () {
 
     logger.time("read");
     if(! wrapper->captureImage(*cameraImagePtr)) {
-        logger.error("cycle") << "Could not read a full image";
+        logger.error("cycle") << wrapper->error();
     }
     logger.timeEnd("read");
 
-    std::int64_t sleepy = 1000 * 1000 / framerate;
+    std::int64_t sleepy = 1000 * 1000 / settings.framerate;
     logger.debug("cycle") << "Sleepy: " << sleepy;
     //usleep(sleepy);
 

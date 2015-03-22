@@ -18,30 +18,20 @@
 #include "lms/type/module_config.h"
 #include "lms/imaging/format.h"
 #include "lms/imaging/image.h"
-#include "lms/logger.h"
+#include "camera.h"
 
 namespace lms_camera_importer {
 
 int xioctl(int64_t fh, int64_t request, void *arg);
 
-class V4L2Wrapper {
+class V4L2Wrapper : public Camera {
  public:
-    struct CameraResolution {
-        std::string pixelFormat;
-        std::uint32_t internalPixelFormat;
-        std::uint32_t width;
-        std::uint32_t height;
-        std::uint32_t framerate;
-    };
-
-    V4L2Wrapper(lms::logging::Logger *rootLogger);
-
     /**
      * @brief Open a device path, e.g. "/dev/video0"
      * @param devicePath usually something inside /dev/
-     * @return true if opening was successful, otherwise false
+     * @return OK if successful
      */
-    bool openDevice(const std::string &devicePath);
+    bool openDevice(const std::string &device, const Settings &settings) override;
 
     /**
      * @brief Close the camera file desciptor.
@@ -51,13 +41,35 @@ class V4L2Wrapper {
      *
      * @return true if closing was successful, otherwise false
      */
-    bool closeDevice();
+    bool closeDevice() override;
 
     /**
-     * @brief Check if the device was opened an not yet closed.
-     * @return true if open, otherwise false
+     * @brief Check if the device was opened and to closed
+     * and is ready to capture images.
+     *
+     * @return true if device is ready, false otherwise
      */
-    bool isOpen();
+    bool isDeviceReady() override;
+
+    bool setCameraSettings(const lms::type::ModuleConfig *cameraConfig);
+    bool queryCameraControls();
+    bool printCameraControls();
+
+    const std::vector<Settings>& getValidCameraSettings();
+
+    bool captureImage(lms::imaging::Image &image) override;
+
+ private:
+    bool perror(const std::string &msg);
+
+    int fd;
+
+    /**
+     * @brief Should be either V4L2_CAP_READWRITE or V4L2_CAP_STREAMING.
+     */
+    std::uint32_t ioType;
+
+    std::map<std::string, struct v4l2_queryctrl> cameraControls;
 
     /**
      * @brief Set width, height and pixel format of the captured images.
@@ -81,44 +93,20 @@ class V4L2Wrapper {
      */
     std::uint32_t getFramerate();
 
-    /**
-     * @brief Check if the device is a video capturing device.
-     * @return true if camera is valid for capturing
-     */
-    bool isValidCamera();
-
-    bool setCameraSettings(const lms::type::ModuleConfig *cameraConfig);
-    bool queryCameraControls();
-    bool printCameraControls();
-
-    void getSupportedResolutions(std::vector<CameraResolution> &result);
-
-    bool captureImage(lms::imaging::Image &image);
-
-    bool initBuffersIfNecessary();
-
- private:
-    lms::logging::ChildLogger logger;
-    std::string devicePath;
-    int fd;
-
-    /**
-     * @brief Should be either V4L2_CAP_READWRITE or V4L2_CAP_STREAMING.
-     */
-    std::uint32_t ioType;
-
-    std::map<std::string, struct v4l2_queryctrl> cameraControls;
-
     static std::uint32_t toV4L2(lms::imaging::Format fmt);
+
+    static lms::imaging::Format fromV4L2(std::uint32_t fmt);
 
     std::int32_t getControl(std::uint32_t id);
     std::int32_t getControl(const std::string& name);
     bool setControl(std::uint32_t id, std::int32_t value);
     bool setControl(const std::string& name, std::int32_t value);
 
-    void getSupportedFramesizes(std::vector<CameraResolution> &result, CameraResolution res);
-    void getSupportedFramerates(std::vector<CameraResolution> &result,
-                                CameraResolution res);
+    std::vector<Settings> cachedValidSettings;
+
+    void getSupportedResolutions(std::vector<Settings> &result);
+    void getSupportedFramesizes(std::vector<Settings> &result, Settings settings);
+    void getSupportedFramerates(std::vector<Settings> &result, Settings settings);
 
     // for MMAPPING:
     struct MapBuffer {

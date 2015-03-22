@@ -1,11 +1,13 @@
 set ( SOURCES 
 	"src/camera_importer.cpp"
+	"src/camera.cpp"
 	"src/v4l2_wrapper.cpp"
 	"src/interface.cpp"
 )
 
 set (HEADERS 
 	"include/camera_importer.h"
+	"include/camera.h"
 	"include/v4l2_wrapper.h"
 	${HEADERS_SHARED}
 )
