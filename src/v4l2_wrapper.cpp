@@ -526,26 +526,20 @@ bool V4L2Wrapper::captureImage(lms::imaging::Image &image) {
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         buf.memory = V4L2_MEMORY_MMAP;
 
-        std::cout << "Before DQBUF" << std::endl;
-
         /* Dequeue */
         if(-1 == xioctl(fd, VIDIOC_DQBUF, &buf)) {
             return perror("VIDIOC_DQBUF");
         }
 
-        /* Copy data to image */
-        std::cout << "Image: " << image.size() << " " << buffers[buf.index].length;
-
         lms::extra::PrecisionTime timestamp =
-            lms::extra::PrecisionTime::fromMicros(buf.timestamp.tv_sec * 1000 * 1000 + buf.timestamp.tv_usec);
+            lms::extra::PrecisionTime::fromMicros(buf.timestamp.tv_sec * 1000 * 1000
+                                                  + buf.timestamp.tv_usec);
 
-        std::cout << lms::extra::PrecisionTime::now() - timestamp;
+        std::cout << "Buffer age: "
+                  << (lms::extra::PrecisionTime::now() - timestamp) << std::endl;
 
-        std::cout << "Before memcpy" << std::endl;
-
+        /* Copy data to image */
         memcpy(image.data(), buffers[buf.index].start, image.size());
-
-        std::cout << "Before QBUF" << std::endl;
 
         /* Queue buffer for next frame */
         if(-1 == xioctl(fd, VIDIOC_QBUF, &buf)) {
