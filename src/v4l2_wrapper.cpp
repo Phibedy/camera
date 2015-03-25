@@ -237,13 +237,13 @@ std::int32_t V4L2Wrapper::getControl(std::uint32_t id)
     }
 }
 
-std::int32_t V4L2Wrapper::getControl(const std::string& name)
-{
-    if( cameraControls.find(name) == cameraControls.end() )
-    {
-        return false;  // TODO WHAT?
+std::int32_t V4L2Wrapper::getControl(const std::string& name) {
+    CameraControlsMap::const_iterator it = cameraControls.find(name);
+
+    if (it == cameraControls.end()) {
+        return 0;  // TODO better error handling
     }
-    return getControl(cameraControls[name].id);
+    return getControl(it->second.id);
 }
 
 bool V4L2Wrapper::setControl(uint32_t id, std::int32_t value)
@@ -274,13 +274,13 @@ bool V4L2Wrapper::setControl(uint32_t id, std::int32_t value)
     }
 }
 
-bool V4L2Wrapper::setControl(const std::string& name, std::int32_t value)
-{
-    if( cameraControls.find(name) == cameraControls.end() )
-    {
+bool V4L2Wrapper::setControl(const std::string& name, std::int32_t value) {
+    CameraControlsMap::const_iterator it = cameraControls.find(name);
+
+    if (it == cameraControls.end()) {
         return false;
     }
-    return setControl(cameraControls[name].id, value);
+    return setControl(it->second.id, value);
 }
 
 bool V4L2Wrapper::setCameraSettings(const lms::type::ModuleConfig *cameraConfig) {

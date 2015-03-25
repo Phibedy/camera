@@ -69,7 +69,8 @@ class V4L2Wrapper : public Camera {
      */
     std::uint32_t ioType;
 
-    std::map<std::string, struct v4l2_queryctrl> cameraControls;
+    typedef std::map<std::string, struct v4l2_queryctrl> CameraControlsMap;
+    CameraControlsMap cameraControls;
 
     /**
      * @brief Set width, height and pixel format of the captured images.
