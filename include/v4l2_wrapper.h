@@ -105,8 +105,11 @@ class V4L2Wrapper : public Camera {
     std::vector<Settings> cachedValidSettings;
 
     void getSupportedResolutions(std::vector<Settings> &result);
-    void getSupportedFramesizes(std::vector<Settings> &result, Settings settings);
-    void getSupportedFramerates(std::vector<Settings> &result, Settings settings);
+    void getSupportedFramesizes(std::vector<Settings> &result,
+                                const std::string &description, std::uint32_t pixelFormat);
+    void getSupportedFramerates(std::vector<Settings> &result,
+                                const std::string &description, std::uint32_t pixelFormat,
+                                std::uint32_t width, std::uint32_t height);
 
     // for MMAPPING:
     struct MapBuffer {

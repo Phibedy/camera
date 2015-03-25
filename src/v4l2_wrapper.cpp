@@ -419,8 +419,7 @@ void V4L2Wrapper::getSupportedResolutions(std::vector<Settings> &result) {
 
     while(xioctl(fd, VIDIOC_ENUM_FMT, &desc) == 0) {
         Camera::Settings res;
-        res.description = std::string((char*)desc.description);
-        res.format = fromV4L2(desc.pixelformat);
+        std::string description = (char*)desc.description;
 
 //        if(desc.flags & V4L2_FMT_FLAG_COMPRESSED) {
 //            std::cout << "  COMPRESSED" << std::endl;
@@ -428,24 +427,24 @@ void V4L2Wrapper::getSupportedResolutions(std::vector<Settings> &result) {
 //        if(desc.flags & V4L2_FMT_FLAG_EMULATED) {
 //            std::cout << "  EMULATED" << std::endl;
 //        }
-        getSupportedFramesizes(result, res);
+        getSupportedFramesizes(result, description, desc.pixelformat);
         desc.index ++;
     }
 }
 
-void V4L2Wrapper::getSupportedFramesizes(std::vector<Settings> &result, Settings res) {
+void V4L2Wrapper::getSupportedFramesizes(std::vector<Settings> &result,
+                                         const std::string &description, std::uint32_t pixelFormat) {
     v4l2_frmsizeenum frm;
     memset(&frm, 0, sizeof(frm));
 
     frm.index = 0;
-    frm.pixel_format = toV4L2(res.format);
+    frm.pixel_format = pixelFormat;
 
     xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frm);
     if(frm.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
         while(xioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frm) != -1) {
-            res.width = frm.discrete.width;
-            res.height = frm.discrete.height;
-            getSupportedFramerates(result, res);
+            getSupportedFramerates(result, description, pixelFormat,
+                                   frm.discrete.width, frm.discrete.height);
             frm.index ++;
         }
     }
@@ -465,27 +464,33 @@ void V4L2Wrapper::getSupportedFramesizes(std::vector<Settings> &result, Settings
         }
 
         for(int w = minW, h = minH; w <= maxW && h <= maxH; w+=stepWidth, h+=stepHeight) {
-            res.width = w;
-            res.height = h;
-            getSupportedFramerates(result, res);
+            getSupportedFramerates(result, description, pixelFormat, w, h);
         }
     }
 }
 
-void V4L2Wrapper::getSupportedFramerates(std::vector<Settings> &result, Settings res) {
+void V4L2Wrapper::getSupportedFramerates(std::vector<Settings> &result,
+                                         const std::string &description, std::uint32_t pixelFormat,
+                                         std::uint32_t width, std::uint32_t height) {
     // http://guido.vonrudorff.de/v4l2-get-framerates/
+
+    Settings settings;
+    settings.description = description;
+    settings.format = fromV4L2(pixelFormat);
+    settings.width = width;
+    settings.height = height;
 
     struct v4l2_frmivalenum temp;
     memset(&temp, 0, sizeof(temp));
-    temp.pixel_format = toV4L2(res.format);
-    temp.width = res.width;
-    temp.height = res.height;
+    temp.pixel_format = pixelFormat;
+    temp.width = width;
+    temp.height = height;
 
     xioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &temp);
     if (temp.type == V4L2_FRMIVAL_TYPE_DISCRETE) {
         while (xioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &temp) != -1) {
-            res.framerate = float(temp.discrete.denominator)/temp.discrete.numerator;
-            result.push_back(res);
+            settings.framerate = float(temp.discrete.denominator)/temp.discrete.numerator;
+            result.push_back(settings);
 
             temp.index += 1;
         }
@@ -501,8 +506,8 @@ void V4L2Wrapper::getSupportedFramerates(std::vector<Settings> &result, Settings
             stepval = float(temp.stepwise.step.numerator)/temp.stepwise.step.denominator;
         }
         for (float cval = minval; cval <= maxval; cval += stepval) {
-            res.framerate = 1 / cval;
-            result.push_back(res);
+            settings.framerate = 1 / cval;
+            result.push_back(settings);
         }
     }
 }
