@@ -49,6 +49,10 @@ bool CameraImporter::initialize() {
         return false;
     }
 
+    for(const CameraDevice &dev : wrapper->getAvailableDevices()) {
+        logger.debug("dev") << dev.device << " " << dev.description;
+    }
+
     for(const Camera::Settings &res: wrapper->getValidCameraSettings()) {
         logger.debug("cam") << res.description << " " << res.format << " "
                             << res.width << "x" << res.height << " " << res.framerate << " FPS";

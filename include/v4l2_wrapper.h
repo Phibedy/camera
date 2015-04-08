@@ -55,7 +55,9 @@ class V4L2Wrapper : public Camera {
     bool queryCameraControls();
     bool printCameraControls();
 
-    const std::vector<Settings>& getValidCameraSettings();
+    const std::vector<Settings>& getValidCameraSettings() override;
+
+    std::vector<CameraDevice> getAvailableDevices() override;
 
     bool captureImage(lms::imaging::Image &image) override;
 

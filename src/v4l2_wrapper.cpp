@@ -17,6 +17,43 @@ bool V4L2Wrapper::perror(const std::string &msg) {
     return error(msg + " " + strerror(errno));
 }
 
+std::vector<CameraDevice> V4L2Wrapper::getAvailableDevices() {
+    std::vector<CameraDevice> devices;
+    int num = -1;
+
+    while(num < 64) {
+        num ++;
+        std::string devicePath = std::string("/dev/video") + std::to_string(num);
+
+        int fd = ::open(devicePath.c_str(), O_RDONLY);
+
+        if(fd == -1) {
+            continue;
+        }
+
+        struct v4l2_capability cap;
+        if (-1 == xioctl (fd, VIDIOC_QUERYCAP, &cap)) {
+            close(fd);
+            continue;
+        }
+
+        // check if device is a camera that can capture images
+        if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
+            close(fd);
+            continue;
+        }
+
+        CameraDevice dev;
+        dev.device = devicePath;
+        dev.description = std::string((char*)cap.card) + " " + (char*)cap.driver;
+        devices.push_back(dev);
+
+        close(fd);
+    }
+
+    return devices;
+}
+
 bool V4L2Wrapper::openDevice(const std::string &device, const Settings &settings) {
     this->m_device = device;
     this->m_settings = settings;

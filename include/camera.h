@@ -9,6 +9,11 @@
 
 namespace lms_camera_importer {
 
+struct CameraDevice {
+    std::string device;
+    std::string description;
+};
+
 class Camera {
 public:
     virtual ~Camera() {}
@@ -20,6 +25,14 @@ public:
         std::uint32_t height;
         std::uint32_t framerate;
     };
+
+    /**
+     * @brief Return a list of all camera devices that
+     * can be captured by the wrapper.
+     *
+     * @return list of devices
+     */
+    virtual std::vector<CameraDevice> getAvailableDevices() =0;
 
     virtual bool openDevice(const std::string &device, const Settings &settings) =0;
     virtual bool closeDevice() =0;
