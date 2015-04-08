@@ -49,12 +49,10 @@ bool CameraImporter::initialize() {
         return false;
     }
 
-//    std::vector<Camera::Settings> resolutions;
-//    wrapper->getSupportedResolutions(resolutions);
-//    for(const V4L2Wrapper::CameraResolution &res: resolutions) {
-//        logger.debug("cam") << res.pixelFormat << " "
-//                            << res.width << "x" << res.height << " " << res.framerate << " FPS";
-//    }
+    for(const Camera::Settings &res: wrapper->getValidCameraSettings()) {
+        logger.debug("cam") << res.description << " " << res.format << " "
+                            << res.width << "x" << res.height << " " << res.framerate << " FPS";
+    }
 
     logger.info("camera was set up!");
     
@@ -108,10 +106,6 @@ bool CameraImporter::cycle () {
         logger.error("cycle") << wrapper->error();
     }
     logger.timeEnd("read");
-
-    std::int64_t sleepy = 1000 * 1000 / settings.framerate;
-    logger.debug("cycle") << "Sleepy: " << sleepy;
-    //usleep(sleepy);
 
 	return true;
 }

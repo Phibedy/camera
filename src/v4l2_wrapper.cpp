@@ -60,16 +60,16 @@ bool V4L2Wrapper::openDevice(const std::string &device, const Settings &settings
 
     // For memory mapping
     if(ioType == V4L2_CAP_STREAMING) {
-        std::cout << "Before init buffers" <<std::endl;
+        // std::cout << "Before init buffers" <<std::endl;
         if(! initBuffers()) {
             return false;
         }
 
-        std::cout << "Before queueBuffers" << std::endl;
+        // std::cout << "Before queueBuffers" << std::endl;
         if(! queueBuffers()) {
             return false;
         }
-        std::cout << "Buffer ready" << std::endl;
+        // std::cout << "Buffer ready" << std::endl;
     }
 
     return success();
@@ -531,12 +531,12 @@ bool V4L2Wrapper::captureImage(lms::imaging::Image &image) {
             return perror("VIDIOC_DQBUF");
         }
 
-        lms::extra::PrecisionTime timestamp =
-            lms::extra::PrecisionTime::fromMicros(buf.timestamp.tv_sec * 1000 * 1000
-                                                  + buf.timestamp.tv_usec);
+        //lms::extra::PrecisionTime timestamp =
+        //    lms::extra::PrecisionTime::fromMicros(buf.timestamp.tv_sec * 1000 * 1000
+        //                                          + buf.timestamp.tv_usec);
 
-        std::cout << "Buffer age: "
-                  << (lms::extra::PrecisionTime::now() - timestamp) << std::endl;
+        //std::cout << "Buffer age: "
+        //          << (lms::extra::PrecisionTime::now() - timestamp) << std::endl;
 
         /* Copy data to image */
         memcpy(image.data(), buffers[buf.index].start, image.size());
@@ -571,7 +571,7 @@ bool V4L2Wrapper::initBuffers() {
     buffers = reinterpret_cast<MapBuffer*>(calloc(reqbuf.count, sizeof(*buffers)));
     numBuffers = reqbuf.count;
 
-    std::cout<< "Num Buffers: " << numBuffers << std::endl;
+    // std::cout<< "Num Buffers: " << numBuffers << std::endl;
 
     for(unsigned int n = 0; n < reqbuf.count; n++) {
         // query buffers
