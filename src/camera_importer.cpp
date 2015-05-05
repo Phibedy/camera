@@ -36,7 +36,7 @@ bool CameraImporter::initialize() {
     }
 
     // get write permission for data channel
-    cameraImagePtr = datamanager()->writeChannel<lms::imaging::Image>(this, "CAMERA_IMAGE");
+    cameraImagePtr = datamanager()->writeChannel<lms::imaging::Image>(this, "IMAGE");
     cameraImagePtr->resize(width, height, format);
 
     // init wrapper
