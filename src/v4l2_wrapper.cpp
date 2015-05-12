@@ -506,7 +506,7 @@ bool V4L2Wrapper::captureImage(lms::imaging::Image &image) {
         /* Copy data to image */
         logger.info("captureImage") << "Image: " << image.size() << " " << buffers[buf.index].length;
 
-        timeval now;
+        //timeval now;
 
         lms::extra::PrecisionTime timestamp =
             lms::extra::PrecisionTime::fromMicros(buf.timestamp.tv_sec * 1000 * 1000 + buf.timestamp.tv_usec);
