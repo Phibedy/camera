@@ -13,7 +13,7 @@ int xioctl(int64_t fh, int64_t request, void *arg)
     return r;
 }
 
-V4L2Wrapper::V4L2Wrapper(lms::logging::Logger *rootLogger) : logger("V4L2", rootLogger), fd(0), ioType(0) {
+V4L2Wrapper::V4L2Wrapper(lms::logging::Logger &logger) : logger(logger), fd(0), ioType(0) {
 }
 
 bool V4L2Wrapper::openDevice(const std::string &devicePath) {

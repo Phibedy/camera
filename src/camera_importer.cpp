@@ -40,7 +40,7 @@ bool CameraImporter::initialize() {
     cameraImagePtr->resize(width, height, format);
 
     // init wrapper
-    wrapper = new V4L2Wrapper(&logger);
+    wrapper = new V4L2Wrapper(logger);
 
     logger.debug("init") << "Opening " << file << " ...";
     if(! wrapper->openDevice(file)) {

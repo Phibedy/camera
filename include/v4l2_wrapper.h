@@ -34,7 +34,7 @@ class V4L2Wrapper {
         std::uint32_t framerate;
     };
 
-    V4L2Wrapper(lms::logging::Logger *rootLogger);
+    V4L2Wrapper(lms::logging::Logger& logger);
 
     /**
      * @brief Open a device path, e.g. "/dev/video0"
@@ -98,7 +98,7 @@ class V4L2Wrapper {
     bool initBuffersIfNecessary();
 
  private:
-    lms::logging::ChildLogger logger;
+    lms::logging::Logger &logger;
     std::string devicePath;
     int fd;
 
