@@ -30,7 +30,7 @@ protected:
     std::string file;
     int framerate;
 
-    lms::imaging::Image *cameraImagePtr;
+    lms::WriteDataChannel<lms::imaging::Image> cameraImagePtr;
 
     V4L2Wrapper *wrapper;
 };
