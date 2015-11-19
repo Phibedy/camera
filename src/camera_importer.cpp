@@ -19,16 +19,13 @@ namespace lms_camera_importer {
 bool CameraImporter::initialize() {
     logger.info() << "Init: CameraImporter";
 
-    // read config
-    cameraConfig = getConfig();
-
-    file = cameraConfig->get<std::string>("device");
-    int width = cameraConfig->get<int>("width");
-    int height = cameraConfig->get<int>("height");
+    file = config().get<std::string>("device");
+    int width = config().get<int>("width");
+    int height = config().get<int>("height");
     lms::imaging::Format format =
-            lms::imaging::formatFromString(cameraConfig->get<std::string>("format",
+            lms::imaging::formatFromString(config().get<std::string>("format",
             lms::imaging::formatToString(lms::imaging::Format::YUYV)));
-    framerate = cameraConfig->get<int>("framerate");
+    framerate = config().get<int>("framerate");
 
     if(format == lms::imaging::Format::UNKNOWN) {
         logger.error("init") << "Format is " << format;
@@ -74,7 +71,7 @@ bool CameraImporter::initialize() {
     // Set camera settings
 
     wrapper->queryCameraControls();
-    wrapper->setCameraSettings(cameraConfig);
+    wrapper->setCameraSettings(&config());
     wrapper->queryCameraControls(); // Re-read current controls
     wrapper->printCameraControls();
 
@@ -103,7 +100,7 @@ bool CameraImporter::cycle () {
 
     //TODO Nicht so geil
     if(!valid) {
-        printf("Camera Importer: Camera handle not valid!\n");
+        logger.error("Camera Importer: Camera handle not valid!\n");
         while(!valid) {
             wrapper->closeDevice();
             // TODO set format and FPS
@@ -115,10 +112,10 @@ bool CameraImporter::cycle () {
         // Set camera settings
 
         wrapper->queryCameraControls();
-        wrapper->setCameraSettings(cameraConfig);
+        wrapper->setCameraSettings(&config());
         wrapper->queryCameraControls(); // Re-read current controls
         wrapper->printCameraControls();
-
+        return false;
     }
 
     logger.time("read");
@@ -126,11 +123,6 @@ bool CameraImporter::cycle () {
         logger.error("cycle") << "Could not read a full image";
     }
     logger.timeEnd("read");
-
-    std::int64_t sleepy = 1000 * 1000 / framerate;
-    logger.debug("cycle") << "Sleepy: " << sleepy;
-    //usleep(sleepy);
-
 	return true;
 }
 

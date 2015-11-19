@@ -25,8 +25,6 @@ public:
     bool cycle();
 
 protected:
-
-    const lms::type::ModuleConfig* cameraConfig;
     std::string file;
     int framerate;
 

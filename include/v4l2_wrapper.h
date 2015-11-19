@@ -87,7 +87,7 @@ class V4L2Wrapper {
      */
     bool isValidCamera();
 
-    bool setCameraSettings(const lms::type::ModuleConfig *cameraConfig);
+    bool setCameraSettings(const lms::ModuleConfig *cameraConfig);
     bool queryCameraControls();
     bool printCameraControls();
 

@@ -14,5 +14,5 @@ include_directories("include")
 
 if(UNIX AND NOT APPLE)
     add_library ( camera_importer MODULE ${SOURCES} ${HEADERS})
-    target_link_libraries(camera_importer PRIVATE lmscore imaging)
+    target_link_libraries(camera_importer PRIVATE lmscore imaging opencv_binding)
 endif()
