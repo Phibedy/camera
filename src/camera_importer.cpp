@@ -3,7 +3,6 @@
 #include <string>
 #include <lms/imaging/static_image.h>
 #include "lms/imaging/converter.h"
-#include <lms/datamanager.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -8,7 +8,6 @@
 
 #include <linux/videodev2.h>
 
-#include <lms/datamanager.h>
 #include <lms/module.h>
 #include <lms/type/module_config.h>
 #include <lms/imaging/image.h>
