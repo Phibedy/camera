@@ -9,7 +9,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <linux/videodev2.h>
-#include <lms/type/module_config.h>
+#include <lms/config.h>
 #include <string.h>
 //TODO: Use MMAPING!
 
@@ -32,7 +32,7 @@ bool CameraImporter::initialize() {
     }
 
     // get write permission for data channel
-    cameraImagePtr = datamanager()->writeChannel<lms::imaging::Image>(this, "IMAGE");
+    cameraImagePtr = writeChannel<lms::imaging::Image>("IMAGE");
     cameraImagePtr->resize(width, height, format);
 
     // init wrapper

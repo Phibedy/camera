@@ -15,7 +15,7 @@
 #include <map>
 #include <vector>
 
-#include "lms/type/module_config.h"
+#include "lms/config.h"
 #include "lms/imaging/format.h"
 #include "lms/imaging/image.h"
 #include "lms/logger.h"
@@ -87,7 +87,7 @@ class V4L2Wrapper {
      */
     bool isValidCamera();
 
-    bool setCameraSettings(const lms::ModuleConfig *cameraConfig);
+    bool setCameraSettings(const lms::Config *cameraConfig);
     bool queryCameraControls();
     bool printCameraControls();
 

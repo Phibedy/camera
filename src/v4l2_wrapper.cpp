@@ -1,6 +1,6 @@
 #include "v4l2_wrapper.h"
 #include "sys/mman.h"  // mmap, munmap
-#include "lms/extra/time.h"
+#include "lms/time.h"
 
 namespace lms_camera_importer {
 
@@ -270,7 +270,7 @@ bool V4L2Wrapper::setControl(const std::string& name, std::int32_t value)
     return setControl(cameraControls[name].id, value);
 }
 
-bool V4L2Wrapper::setCameraSettings(const lms::type::ModuleConfig *cameraConfig) {
+bool V4L2Wrapper::setCameraSettings(const lms::Config *cameraConfig) {
     for( auto it = cameraControls.begin(); it != cameraControls.end(); ++it )
     {
         const std::string& name = it->first;
@@ -508,10 +508,9 @@ bool V4L2Wrapper::captureImage(lms::imaging::Image &image) {
 
         //timeval now;
 
-        lms::extra::PrecisionTime timestamp =
-            lms::extra::PrecisionTime::fromMicros(buf.timestamp.tv_sec * 1000 * 1000 + buf.timestamp.tv_usec);
+        lms::Time timestamp = lms::Time::fromMicros(buf.timestamp.tv_sec * 1000 * 1000 + buf.timestamp.tv_usec);
 
-        logger.info("delay") << lms::extra::PrecisionTime::now() - timestamp;
+        logger.info("delay") << lms::Time::now() - timestamp;
 
         memcpy(image.data(), buffers[buf.index].start, image.size());
 

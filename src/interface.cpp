@@ -1,7 +1,3 @@
 #include <camera_importer.h>
 
-extern "C" {
-void* getInstance () {
-    return new lms_camera_importer::CameraImporter();
-}
-}
+LMS_MODULE_INTERFACE(lms_camera_importer::CameraImporter)
