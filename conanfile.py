@@ -6,8 +6,7 @@ class CameraImporterConan(ConanFile):
     version = "1.0"
     settings = "os", "compiler", "build_type", "arch"
     exports = "include/*","src/*","README.md","CMakeLists.txt","configs/*"
-    requires = "gtest/1.7.0@lasote/stable"
-    requires = "lms/2.0@lms/stable"
+    requires = "lms_imaging/1.0@lms/stable","lms/2.0@lms/stable"
     generators = "cmake"
 
     def build(self):
