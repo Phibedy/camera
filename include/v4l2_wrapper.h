@@ -20,8 +20,6 @@
 #include "lms/imaging/image.h"
 #include "lms/logger.h"
 
-namespace lms_camera_importer {
-
 int xioctl(int64_t fh, int64_t request, void *arg);
 
 class V4L2Wrapper {
@@ -132,7 +130,5 @@ class V4L2Wrapper {
     MapBuffer *buffers;
     unsigned int numBuffers;
 };
-
-}  // namespace lms_camera_importer
 
 #endif /* LMS_CAMERA_IMPORTER_V4L2_WRAPPER */

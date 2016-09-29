@@ -13,18 +13,16 @@
 #include <string.h>
 //TODO: Use MMAPING!
 
-namespace lms_camera_importer {
-
 bool CameraImporter::initialize() {
     logger.info() << "Init: CameraImporter";
 
-    file = config().get<std::string>("device");
-    int width = config().get<int>("width");
-    int height = config().get<int>("height");
+    file = config().get<std::string>("device","");
+    int width = config().get<int>("width",0);
+    int height = config().get<int>("height",0);
     lms::imaging::Format format =
             lms::imaging::formatFromString(config().get<std::string>("format",
             lms::imaging::formatToString(lms::imaging::Format::YUYV)));
-    framerate = config().get<int>("framerate");
+    framerate = config().get<int>("framerate",0);
 
     if(format == lms::imaging::Format::UNKNOWN) {
         logger.error("init") << "Format is " << format;
@@ -124,5 +122,3 @@ bool CameraImporter::cycle () {
     logger.timeEnd("read");
 	return true;
 }
-
-}  // namespace lms_camera_importer

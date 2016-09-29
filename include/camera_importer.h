@@ -13,7 +13,6 @@
 #include <lms/imaging/image.h>
 #include "v4l2_wrapper.h"
 
-namespace lms_camera_importer {
 
 class CameraImporter : public lms::Module {
 public:
@@ -32,6 +31,5 @@ protected:
     V4L2Wrapper *wrapper;
 };
 
-}  // namespace lms_camera_importer
 
 #endif

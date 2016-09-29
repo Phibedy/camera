@@ -2,8 +2,6 @@
 #include "sys/mman.h"  // mmap, munmap
 #include "lms/time.h"
 
-namespace lms_camera_importer {
-
 int xioctl(int64_t fh, int64_t request, void *arg)
 {
     int r;
@@ -296,7 +294,7 @@ bool V4L2Wrapper::setCameraSettings(const lms::Config *cameraConfig) {
 
         int value;
         if(cameraConfig->hasKey(name)) {
-            value = cameraConfig->get<int>(name);
+            value = cameraConfig->get<int>(name,0);
         } else {
             value = ctrl.default_value;
         }
@@ -621,5 +619,3 @@ bool V4L2Wrapper::destroyBuffers() {
 
     return true;
 }
-
-}  // namespace lms_camera_importer
