@@ -1,7 +1,9 @@
+if(USE_CONAN)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
+endif(USE_CONAN)
 
 set ( SOURCES
 	"src/camera_importer.cpp"
@@ -23,7 +25,11 @@ endif()
 
 if(UNIX)
     add_library (camera_importer MODULE ${SOURCES} ${HEADERS})
+if(USE_CONAN)
     target_link_libraries(camera_importer PRIVATE ${CONAN_LIBS})
+else()
+    target_link_libraries(camera_importer PRIVATE lmscore lms_imaging)
+endif(USE_CONAN)
 else(UNIX)
     message(ERROR "only unix support!")
 endif()
